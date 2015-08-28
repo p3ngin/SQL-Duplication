@@ -1,0 +1,102 @@
+USE Scenario1
+GO
+
+--RESET DATA IN TABLE 
+DELETE dbo.enrollment_table
+ALTER TABLE dbo.enrollment_table
+ DROP COLUMN student_id 
+
+
+--Check the data
+
+select * from dbo.enrollment_table
+
+--TABLE CREATION
+
+--Added Column "student_id" because initial column was missing
+
+ALTER TABLE dbo.enrollment_table
+	ADD student_id Nchar(6) NULL ;
+
+
+--Change data type to int for ease of use
+
+ALTER Table dbo.enrollment_table
+	ALTER COLUMN school_id int
+ALTER Table dbo.enrollment_table	
+	ALTER COLUMN student_id int
+ALTER Table dbo.enrollment_table	
+	ALTER COLUMN enrollment_id int
+
+--Insert row with SQL INSERT command
+Insert into dbo.enrollment_table
+	values 
+	(4016, 12457680, '20110814', '20110810', 'C. Robinson','20110814', 235876)
+
+
+--Insert all Data (multiple rows) with SQL INSERT command
+
+Insert into dbo.enrollment_table
+	values 
+	(4016, 12457680, '20110810', '20110814', 'C. Robinson','20110814', 235876),
+	(4016, 12457681, '20110815', null , 'M. Thompson', '20110820', 235876),
+	(4016, 12457682, '20110815', null , 'J. Allen', '20110818', 235876),
+	(5815, 14472365, '20110810', '20110920', 'A. Jones', '20110920', 734890),
+	(5815, 14472366, '20110921', null, 'J. Allen', '20110924', 734890),
+	(5815, 14472367, '20110921', null, 'B. Rhodes', '20110924', 734890),
+	(5815, 14472368, '20110921', null, 'T. Smith', '20110921', 734890)
+
+
+
+--Delete the duplicated row entered twice by previous Insert statements
+--Uses a CTE or Common Table Expression to define a temporary result with an added value (RowNumber) to display
+--duplicated rows and deleting duplicated enrollment_ids. 
+
+
+WITH tblEnroll as 
+(
+SELECT ROW_NUMBER() OVER(PARTITION BY enrollment_id ORDER BY enrollment_id)
+	AS RowNumber,* FROM enrollment_table
+)
+DELETE FROM tblEnroll where RowNumber > 1
+
+
+-- EXAMPLE: SCHOOL DATABASE: SCENARIO 1
+--SCENARIO 1 - Most Recent Guidance Counselor/Removing Duplicate Entries
+
+USE Scenario1
+GO
+
+
+--EXAMPLE of INCORRECT Query 
+
+SELECT school_id, student_id, enrollment_id, entry_date, leave_date, record_change_date, 
+	FIRST_VALUE(counselor_name) OVER (PARTITION BY enrollment_id ORDER BY record_change_date) AS Counselor
+FROM enrollment_table ET
+WHERE record_change_date in 
+	(SELECT MAX(record_change_date)from enrollment_table B
+	WHERE B.enrollment_id = ET.enrollment_id)
+
+--Row 1 is Correct
+--Row 2 & 3 do not take into account the duplicate student_id, entry_date, and record_change_date
+	-- Needs to compare further enrollment_id to use the greater of the two enrollment_ids
+--Did not select the most recent counselor per student for each semester (entry_date)
+
+
+--EXAMPLE of CORRECT Query
+
+WITH En1 as 
+(
+	SELECT MAX(enrollment_id)OVER(PARTITION BY entry_date, record_change_date) as TopEnr_ID,*
+	FROM enrollment_table  --"TopEnr_ID" distinguishes the top enrollment ID for each entry_id/record_change_date
+)
+SELECT enrollment_id, school_id, student_id, entry_date, leave_date, record_change_date, 
+	FIRST_VALUE(counselor_name) OVER (PARTITION BY enrollment_id ORDER BY record_change_date) AS Counselor, TopENr_ID
+FROM En1 A  
+Where record_change_date = (SELECT MAX(record_change_date) FROM En1 WHERE entry_date = A.entry_date) AND 
+	A.enrollment_id = TopEnr_ID 
+	
+
+
+
+
