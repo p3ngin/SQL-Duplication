@@ -1,7 +1,9 @@
 # SQL-Duplication-Scenario1
 Eliminating Multiple Variable Duplication Using CTEs
 
-This problem was provided as a skill assessment for a data warehousing project.  
+This problem was provided as a skill assessment for a data warehousing project. 
+
+(SQL Server 2014)
 
 
 
